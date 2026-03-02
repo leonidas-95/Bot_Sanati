@@ -127,12 +127,28 @@ def notificar_duena(origen, cliente_id, mensaje, plataforma):
 # 🧠 CEREBRO (MENÚ ESTRICTO SIN IA)
 # =====================================================
 def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
-    mensaje_usuario = str(mensaje_usuario).strip()
+    # Convertimos a minúsculas para que "HOLA" o "hola" funcionen igual
+    mensaje_usuario = str(mensaje_usuario).strip().lower()
     session_key = f"{plataforma}_{usuario_id}"
-    estado_actual = user_sessions.get(session_key, 'menu')
     
+    estado_actual = user_sessions.get(session_key, 'nuevo')
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
+    # 1. MODO PAUSADO (HUMAN HANDOFF - Tiene prioridad absoluta)
+    if estado_actual == 'pausado':
+        if mensaje_usuario == '0':
+            user_sessions[session_key] = 'menu'
+            responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
+        return # Si está pausado y dice otra cosa, salimos sin hacer ruido
+        
+    # 2. INTERCEPCIÓN DE SALUDOS Y BOTÓN DE REGRESO GLOBAL (0)
+    saludos = ['hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar']
+    if estado_actual == 'nuevo' or mensaje_usuario in saludos or mensaje_usuario == '0':
+        user_sessions[session_key] = 'menu'
+        responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
+        return
+
+    # 3. NAVEGACIÓN DEL MENÚ (Solo llega aquí si no es 0 ni un saludo)
     if estado_actual == 'menu':
         if mensaje_usuario == '1':
             URL_FOTO_SABORES = "https://i.imgur.com/emCdIVl.jpeg"
@@ -174,24 +190,8 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "🥡 *Individual (70g)*: Para el antojo. (0 para volver)", plataforma)
         elif mensaje_usuario == '2':
             responder(usuario_id, "📦 *Familiar (500g)*: Para compartir. (0 para volver)", plataforma)
-        elif mensaje_usuario == '0':
-            user_sessions[session_key] = 'menu'
-            responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         else:
             responder(usuario_id, "Opción no válida. 1, 2 o manda 0 para volver.", plataforma)
-
-    elif mensaje_usuario == '0':
-        user_sessions[session_key] = 'menu'
-        responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
-    
-    # --- MODO PAUSADO (HUMAN HANDOFF) ---
-    elif estado_actual == 'pausado':
-        if mensaje_usuario == '0':
-            user_sessions[session_key] = 'menu'
-            responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
-        else:
-            # El bot se queda en absoluto silencio
-            pass
 
     elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
         responder(usuario_id, "¡Gracias! Datos recibidos 📝. Te contactaremos pronto. (Escribe 0 para volver al menú)", plataforma)
