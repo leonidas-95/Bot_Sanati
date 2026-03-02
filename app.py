@@ -206,13 +206,6 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 # =====================================================
 # RUTAS FLASK
 # =====================================================
-@app.route("/webhook", methods=["GET"])
-def verificar_token():
-    token = request.args.get("hub.verify_token")
-    if token == VERIFY_TOKEN:
-        return request.args.get("hub.challenge"), 200
-    return "Error Token", 403
-
 @app.route("/webhook", methods=["POST"])
 def recibir_eventos():
     try:
@@ -220,8 +213,17 @@ def recibir_eventos():
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
+                    # 🛑 REGLA NUEVA: Ignorar los "ecos" (mensajes que el bot se envía a sí mismo)
+                    if "message" in event and event["message"].get("is_echo"):
+                        continue
+                        
                     if "message" in event and "text" in event["message"]:
-                        sender_id = event["sender"]["id"]
+                        sender_id = str(event["sender"]["id"])
+                        
+                        # 🛑 DOBLE CANDADO: Si el remitente es la propia cuenta de Sanati, ignorarlo
+                        if sender_id == str(IG_ID):
+                            continue
+                            
                         texto = event["message"]["text"]
                         cerebro_sanati(sender_id, texto, "instagram")
             return jsonify({"status": "ok"}), 200
