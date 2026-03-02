@@ -82,15 +82,19 @@ def enviar_imagen(usuario_id, url_imagen, plataforma):
         print(f"❌ Error de red enviando IMAGEN: {e}")
 
 # =====================================================
-# FUNCIONES DE ENVÍO DE TEXTO
+# FUNCIONES DE ENVÍO DE TEXTO Y LOGS (CHISMOSO)
 # =====================================================
 def enviar_whatsapp(telefono, texto):
     headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
     data = {"messaging_product": "whatsapp", "to": telefono, "type": "text", "text": {"body": texto}}
     try:
-        requests.post(URL_WA, json=data, headers=headers)
+        r = requests.post(URL_WA, json=data, headers=headers)
+        if r.status_code != 200:
+            print(f"❌ ERROR EXACTO DE META (WA): {r.text}")
+        else:
+            print(f"✅ Mensaje/Alerta enviada por WA a {telefono}")
     except Exception as e:
-        print(f"❌ Error enviando WA: {e}")
+        print(f"❌ Error de red WA: {e}")
 
 def enviar_instagram(user_id, texto):
     headers = {"Authorization": f"Bearer {IG_TOKEN}", "Content-Type": "application/json"}
@@ -157,11 +161,11 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'mayoreo'
 
         elif mensaje_usuario == '7':
-            responder(usuario_id, "Claro 😊 Ya le avisé a un humano. Te escribirán pronto.", plataforma)
+            responder(usuario_id, "Claro 😊 Ya le avisé a un humano. Te atenderán en breve.\n\n🤫 *(Bot en pausa. Para regresar al menú automático en cualquier momento, escribe 0)*", plataforma)
             notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
-            user_sessions[session_key] = 'waiting_human'
+            user_sessions[session_key] = 'pausado'
 
-        # 🚫 SI ESCRIBE ALGO QUE NO ES UN NÚMERO (Como no hay IA, pedimos que use el menú)
+        # 🚫 SI ESCRIBE ALGO QUE NO ES UN NÚMERO
         else:
             responder(usuario_id, "Ups, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
 
@@ -180,7 +184,16 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
         user_sessions[session_key] = 'menu'
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
     
-    elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_human', 'waiting_back']:
+    # --- MODO PAUSADO (HUMAN HANDOFF) ---
+    elif estado_actual == 'pausado':
+        if mensaje_usuario == '0':
+            user_sessions[session_key] = 'menu'
+            responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
+        else:
+            # El bot se queda en absoluto silencio
+            pass
+
+    elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
         responder(usuario_id, "¡Gracias! Datos recibidos 📝. Te contactaremos pronto. (Escribe 0 para volver al menú)", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
