@@ -134,15 +134,17 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     estado_actual = user_sessions.get(session_key, 'nuevo')
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
+    saludos = ['hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar']
+
     # 1. MODO PAUSADO (HUMAN HANDOFF - Tiene prioridad absoluta)
     if estado_actual == 'pausado':
-        if mensaje_usuario == '0':
+        # Si está pausado, solo despierta con un saludo o con el 0
+        if mensaje_usuario == '0' or mensaje_usuario in saludos:
             user_sessions[session_key] = 'menu'
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
-        return # Si está pausado y dice otra cosa, salimos sin hacer ruido
+        return # Si dice otra cosa ("gracias", "ok"), sigue mudo
         
     # 2. INTERCEPCIÓN DE SALUDOS Y BOTÓN DE REGRESO GLOBAL (0)
-    saludos = ['hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar']
     if estado_actual == 'nuevo' or mensaje_usuario in saludos or mensaje_usuario == '0':
         user_sessions[session_key] = 'menu'
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
@@ -165,11 +167,26 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'envios'
 
         elif mensaje_usuario == '4':
-            responder(usuario_id, "¿Cuál es tu Ciudad y CP para cotizar?", plataforma)
+            responder(usuario_id, "Puedes checar nuestros puntos de venta en el perfil 🤍\nO compártenos tu ciudad y C.P. y te cotizamos venta directa ✨", plataforma)
             user_sessions[session_key] = 'waiting_back'
         
         elif mensaje_usuario == '5':
-            responder(usuario_id, "🙌 Para pedir, escribe en un mensaje:\n- Sabores y Cantidad\n- Presentación\n- Dirección de entrega", plataforma)
+            # 🖼️ NUEVA IMAGEN PARA 'HACER PEDIDO'
+            # 🛑 Reemplaza el link de abajo por el nuevo link directo de Imgur de tu otra foto
+            URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
+            
+            # 1. Mandamos la imagen
+            enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
+            
+            # 2. Mandamos el texto con las instrucciones claras
+            responder(usuario_id, """
+🙌 Para pedir, escribe en un solo mensaje:
+
+✅ Sabores y Cantidad
+✅ Presentación (Individual o Familiar)
+✅ Dirección de entrega completa (con CP y referencias)
+""", plataforma)
+            
             user_sessions[session_key] = 'tomando_pedido'
 
         elif mensaje_usuario == '6':
@@ -183,7 +200,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 
         # 🚫 SI ESCRIBE ALGO QUE NO ES UN NÚMERO
         else:
-            responder(usuario_id, "Ups, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
+            responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
 
     elif estado_actual == 'presentaciones':
         if mensaje_usuario == '1':
@@ -194,10 +211,12 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "Opción no válida. 1, 2 o manda 0 para volver.", plataforma)
 
     elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
-        responder(usuario_id, "¡Gracias! Datos recibidos 📝. Te contactaremos pronto. (Escribe 0 para volver al menú)", plataforma)
+        # AUTO-PAUSA AL RECIBIR DATOS DEL CLIENTE
+        responder(usuario_id, "Perfecto, danos unos minutos, estamos revisando tus datos ✨\n\n🤫 *(Bot en pausa para que hables con nosotros. Escribe 0 en cualquier momento para ver el menú)*", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
-        user_sessions[session_key] = 'menu'
+        # Aquí el bot se pone en silencio automáticamente
+        user_sessions[session_key] = 'pausado'
 
     else:
         user_sessions[session_key] = 'menu'
@@ -206,6 +225,13 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 # =====================================================
 # RUTAS FLASK
 # =====================================================
+@app.route("/webhook", methods=["GET"])
+def verificar_token():
+    token = request.args.get("hub.verify_token")
+    if token == VERIFY_TOKEN:
+        return request.args.get("hub.challenge"), 200
+    return "Error Token", 403
+
 @app.route("/webhook", methods=["POST"])
 def recibir_eventos():
     try:
@@ -213,14 +239,14 @@ def recibir_eventos():
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
-                    # 🛑 REGLA NUEVA: Ignorar los "ecos" (mensajes que el bot se envía a sí mismo)
+                    # 🛑 Ignorar mensajes de la cuenta propia (eco) para evitar bucles
                     if "message" in event and event["message"].get("is_echo"):
                         continue
                         
                     if "message" in event and "text" in event["message"]:
                         sender_id = str(event["sender"]["id"])
                         
-                        # 🛑 DOBLE CANDADO: Si el remitente es la propia cuenta de Sanati, ignorarlo
+                        # Doble candado para ignorar a la dueña
                         if sender_id == str(IG_ID):
                             continue
                             
