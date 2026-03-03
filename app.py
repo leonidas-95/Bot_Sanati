@@ -33,7 +33,7 @@ user_sessions = {}
 
 # --- TEXTOS DEL MENÚ ---
 MENSAJE_BIENVENIDA = """
-¡Hola! 👋 Soy el asistente virtual de Sanati 🌱
+¡Hola! 💚 Bienvenido a Sanati. ¿Cómo puedo ayudarte hoy?
 
 Escribe el número de la opción que buscas:
 
@@ -194,7 +194,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'mayoreo'
 
         elif mensaje_usuario == '7':
-            responder(usuario_id, "Claro 😊 Ya le avisé a un humano. Te atenderán en breve.\n\n🤫 *(Bot en pausa. Para regresar al menú automático en cualquier momento, escribe 0)*", plataforma)
+            responder(usuario_id, "Claro 😊 Ya le avisé a un humano. Te atenderán en breve", plataforma)
             notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
             user_sessions[session_key] = 'pausado'
 
@@ -212,7 +212,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 
     elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
         # AUTO-PAUSA AL RECIBIR DATOS DEL CLIENTE
-        responder(usuario_id, "Perfecto, danos unos minutos, estamos revisando tus datos ✨\n\n🤫 *(Bot en pausa para que hables con nosotros. Escribe 0 en cualquier momento para ver el menú)*", plataforma)
+        responder(usuario_id, "Perfecto, danos unos minutos, estamos revisando tus datos", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
         # Aquí el bot se pone en silencio automáticamente
