@@ -3,25 +3,24 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import requests
 
-# Abrimos la caja fuerte invisible
+# caja fuerte
 load_dotenv()
 
 app = Flask(__name__)
 
-# =====================================================
-# 🔐 SECCIÓN DE LLAVES SEGURAS (Desde el .env)
-# =====================================================
+# SECCIÓN DE LLAVES
+
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
 
-# --- WHATSAPP ---
+# Whats
 WA_TOKEN = os.environ.get("WA_TOKEN")
 WA_PHONE_ID = os.environ.get("WA_PHONE_ID")
 
-# --- INSTAGRAM ---
+# Instagram
 IG_TOKEN = os.environ.get("IG_TOKEN")
 IG_ID = os.environ.get("IG_ID")
 
-# --- SANATI ---
+# Sanati
 NUMERO_DUENA = os.environ.get("NUMERO_DUENA")
 
 # URLs de envío
@@ -30,8 +29,9 @@ URL_IG = f"https://graph.instagram.com/v17.0/{IG_ID}/messages"
 
 # Memoria
 user_sessions = {}
+mensajes_procesados = set() # 🌟 NUEVA MEMORIA ANTI-DUPLICADOS (La libreta de folios)
 
-# --- TEXTOS DEL MENÚ ---
+# Menú
 MENSAJE_BIENVENIDA = """
 ¡Hola! 💚 Bienvenido a Sanati. ¿Cómo puedo ayudarte hoy?
 
@@ -46,9 +46,8 @@ Escribe el número de la opción que buscas:
 7️⃣ Hablar con una persona
 """
 
-# =====================================================
-# 📸 FUNCIÓN: ENVIAR IMÁGENES
-# =====================================================
+# ENviar imagenes
+
 def enviar_imagen(usuario_id, url_imagen, plataforma):
     if plataforma == "whatsapp":
         headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
@@ -81,9 +80,8 @@ def enviar_imagen(usuario_id, url_imagen, plataforma):
     except Exception as e:
         print(f"❌ Error de red enviando IMAGEN: {e}")
 
-# =====================================================
-# FUNCIONES DE ENVÍO DE TEXTO Y LOGS (CHISMOSO)
-# =====================================================
+# Logs (chismoso)
+
 def enviar_whatsapp(telefono, texto):
     headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
     data = {"messaging_product": "whatsapp", "to": telefono, "type": "text", "text": {"body": texto}}
@@ -123,9 +121,9 @@ def notificar_duena(origen, cliente_id, mensaje, plataforma):
     )
     enviar_whatsapp(NUMERO_DUENA, texto_duena)
 
-# =====================================================
-# 🧠 CEREBRO (MENÚ ESTRICTO SIN IA)
-# =====================================================
+
+# Cerebro del bot :)
+
 def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     # Convertimos a minúsculas para que "HOLA" o "hola" funcionen igual
     mensaje_usuario = str(mensaje_usuario).strip().lower()
@@ -244,6 +242,13 @@ def recibir_eventos():
                         continue
                         
                     if "message" in event and "text" in event["message"]:
+                        # 🌟 FILTRO ANTI-DUPLICADOS INSTAGRAM
+                        msg_id = event["message"].get("mid")
+                        if msg_id in mensajes_procesados:
+                            continue # Ya lo vimos, lo ignoramos
+                        if msg_id:
+                            mensajes_procesados.add(msg_id)
+                            
                         sender_id = str(event["sender"]["id"])
                         
                         # Doble candado para ignorar a la dueña
@@ -260,6 +265,14 @@ def recibir_eventos():
                     value = change["value"]
                     if "messages" in value:
                         mensaje = value["messages"][0]
+                        
+                        # 🌟 FILTRO ANTI-DUPLICADOS WHATSAPP
+                        msg_id = mensaje.get("id")
+                        if msg_id in mensajes_procesados:
+                            continue # Ya lo vimos, lo ignoramos
+                        if msg_id:
+                            mensajes_procesados.add(msg_id)
+                            
                         telefono = mensaje["from"]
                         if telefono.startswith("521") and len(telefono) == 13:
                             telefono = telefono.replace("521", "52", 1)
