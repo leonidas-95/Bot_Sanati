@@ -178,7 +178,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 
         elif mensaje_usuario == '6':
             # 🌟 TEXTO ACTUALIZADO DE MAYOREO
-            responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 👩🏻‍💻✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
+            responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 🏪✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
             user_sessions[session_key] = 'mayoreo'
 
         elif mensaje_usuario == '7':
