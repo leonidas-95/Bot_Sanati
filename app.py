@@ -132,18 +132,26 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     estado_actual = user_sessions.get(session_key, 'nuevo')
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
-    saludos = ['hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar']
+    # 🌟 DICCIONARIO RECARGADO DE DESPERTAR
+    palabras_clave = [
+        'hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar',
+        'quiero', 'precio', 'precios', 'comprar', 'pedido', 'información', 'informacion',
+        'ayuda', 'duda', 'papas', 'botana', 'catalogo', 'catálogo', 'costo', 'sabores'
+    ]
+    
+    # 🌟 EL RADAR (Busca si alguna palabra clave está en lo que dijo el cliente)
+    contiene_saludo = any(palabra in mensaje_usuario for palabra in palabras_clave)
 
     # 1. MODO PAUSADO (HUMAN HANDOFF - Tiene prioridad absoluta)
     if estado_actual == 'pausado':
-        # Si está pausado, solo despierta con un saludo o con el 0
-        if mensaje_usuario == '0' or mensaje_usuario in saludos:
+        # Si está pausado, solo despierta con una palabra clave o con el 0
+        if mensaje_usuario == '0' or contiene_saludo:
             user_sessions[session_key] = 'menu'
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return # Si dice otra cosa ("gracias", "ok"), sigue mudo
         
     # 2. INTERCEPCIÓN DE SALUDOS Y BOTÓN DE REGRESO GLOBAL (0)
-    if estado_actual == 'nuevo' or mensaje_usuario in saludos or mensaje_usuario == '0':
+    if estado_actual == 'nuevo' or contiene_saludo or mensaje_usuario == '0':
         user_sessions[session_key] = 'menu'
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return
@@ -153,7 +161,6 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
         if mensaje_usuario == '1':
             URL_FOTO_SABORES = "https://i.imgur.com/emCdIVl.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_SABORES, plataforma)
-            # 🌟 TEXTO ACTUALIZADO: Jícama Flamin hot, Emojis cambiados y nuevas instrucciones
             responder(usuario_id, "Aquí tienes nuestros sabores 🌶️🥒:\n\n🔸 Jícama: Limón, Adobada, Salsas negras, Jalapeño, Flamin hot\n🔸 Pepino: Limón, Flamin hot\n🔸 Coliflor: Adobada\n\n(0 para menú principal, 1 para hacer pedido)", plataforma)
             user_sessions[session_key] = 'viendo_sabores'
         
@@ -162,7 +169,6 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'presentaciones'
 
         elif mensaje_usuario == '3':
-            # 🌟 TEXTO ACTUALIZADO DE ENVÍOS
             responder(usuario_id, "¡Claro! 😊\n\nHacemos envíos a toda la República 🚛 a partir de 15 piezas.\nCompártenos tu código postal y el estado, y con gusto te cotizamos el envío ✨📦", plataforma)
             user_sessions[session_key] = 'envios'
 
@@ -177,30 +183,24 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'tomando_pedido'
 
         elif mensaje_usuario == '6':
-            # 🌟 TEXTO ACTUALIZADO DE MAYOREO
             responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 🏪✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
             user_sessions[session_key] = 'mayoreo'
 
         elif mensaje_usuario == '7':
-            # 🌟 TEXTO ACTUALIZADO DE HUMANO
             responder(usuario_id, "¡Gracias por tu mensaje! 🙌\nEn un momento alguien del equipo te atiende personalmente 💚", plataforma)
             notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
             user_sessions[session_key] = 'pausado'
 
-        # 🚫 SI ESCRIBE ALGO QUE NO ES UN NÚMERO
         else:
             responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
 
-    # 🌟 NUEVA LÓGICA: SI ESTÁ VIENDO LOS SABORES
     elif estado_actual == 'viendo_sabores':
         if mensaje_usuario == '1':
-            # Funciona exactamente igual que si hubiera presionado 5 en el menú principal
             URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
             responder(usuario_id, "🙌 Para pedir, escribe en un solo mensaje:\n\n✅ Sabores y Cantidad\n✅ Presentación (Individual o Familiar)\n✅ Dirección de entrega completa (con CP y referencias)\n", plataforma)
             user_sessions[session_key] = 'tomando_pedido'
         else:
-            # Si escribe otra cosa, asumimos que está pasando sus datos y lo pausamos
             responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
             notificar_duena("DATOS/PEDIDO", usuario_id, mensaje_usuario, plataforma)
             user_sessions[session_key] = 'pausado'
@@ -214,20 +214,17 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "Opción no válida. 1, 2 o manda 0 para volver.", plataforma)
 
     elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
-        # 🌟 TEXTO ACTUALIZADO DE AUTO-PAUSA AL RECIBIR DATOS DEL CLIENTE
         responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
-        # Aquí el bot se pone en silencio automáticamente
         user_sessions[session_key] = 'pausado'
 
     else:
         user_sessions[session_key] = 'menu'
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
 
-# =====================================================
-# RUTAS FLASK
-# =====================================================
+# Rutas Flask
+
 @app.route("/webhook", methods=["GET"])
 def verificar_token():
     token = request.args.get("hub.verify_token")
@@ -242,21 +239,18 @@ def recibir_eventos():
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
-                    # 🛑 Ignorar mensajes de la cuenta propia (eco) para evitar bucles
                     if "message" in event and event["message"].get("is_echo"):
                         continue
                         
                     if "message" in event and "text" in event["message"]:
-                        # 🌟 FILTRO ANTI-DUPLICADOS INSTAGRAM
                         msg_id = event["message"].get("mid")
                         if msg_id in mensajes_procesados:
-                            continue # Ya lo vimos, lo ignoramos
+                            continue 
                         if msg_id:
                             mensajes_procesados.add(msg_id)
                             
                         sender_id = str(event["sender"]["id"])
                         
-                        # Doble candado para ignorar a la dueña
                         if sender_id == str(IG_ID):
                             continue
                             
@@ -271,10 +265,9 @@ def recibir_eventos():
                     if "messages" in value:
                         mensaje = value["messages"][0]
                         
-                        # 🌟 FILTRO ANTI-DUPLICADOS WHATSAPP
                         msg_id = mensaje.get("id")
                         if msg_id in mensajes_procesados:
-                            continue # Ya lo vimos, lo ignoramos
+                            continue 
                         if msg_id:
                             mensajes_procesados.add(msg_id)
                             
