@@ -29,7 +29,7 @@ URL_IG = f"https://graph.instagram.com/v17.0/{IG_ID}/messages"
 
 # Memoria
 user_sessions = {}
-mensajes_procesados = set() # 🌟 NUEVA MEMORIA ANTI-DUPLICADOS (La libreta de folios)
+mensajes_procesados = set() # 🌟 MEMORIA ANTI-DUPLICADOS (La libreta de folios)
 
 # Menú
 MENSAJE_BIENVENIDA = """
@@ -153,15 +153,17 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
         if mensaje_usuario == '1':
             URL_FOTO_SABORES = "https://i.imgur.com/emCdIVl.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_SABORES, plataforma)
-            responder(usuario_id, "Aquí tienes nuestros sabores 🌶️🥕:\n\n🔸 Jícama: Limón, Adobada, Salsas negras, Jalapeño\n🔸 Pepino: Limón, Flamin hot\n🔸 Coliflor: Adobada\n\n(0 para volver)", plataforma)
-            user_sessions[session_key] = 'waiting_back'
+            # 🌟 TEXTO ACTUALIZADO: Jícama Flamin hot, Emojis cambiados y nuevas instrucciones
+            responder(usuario_id, "Aquí tienes nuestros sabores 🌶️🥒:\n\n🔸 Jícama: Limón, Adobada, Salsas negras, Jalapeño, Flamin hot\n🔸 Pepino: Limón, Flamin hot\n🔸 Coliflor: Adobada\n\n(0 para menú principal, 1 para hacer pedido)", plataforma)
+            user_sessions[session_key] = 'viendo_sabores'
         
         elif mensaje_usuario == '2':
             responder(usuario_id, "Presentaciones:\n1️⃣ Individual (70g)\n2️⃣ Familiar (500g)\n\nElige una o manda 0 para volver.", plataforma)
             user_sessions[session_key] = 'presentaciones'
 
         elif mensaje_usuario == '3':
-            responder(usuario_id, "Envíos 🚚 a partir de 15 piezas.\nEscribe tu Ciudad y CP:", plataforma)
+            # 🌟 TEXTO ACTUALIZADO DE ENVÍOS
+            responder(usuario_id, "¡Claro! 😊\n\nHacemos envíos a toda la República 🚛 a partir de 15 piezas.\nCompártenos tu código postal y el estado, y con gusto te cotizamos el envío ✨📦", plataforma)
             user_sessions[session_key] = 'envios'
 
         elif mensaje_usuario == '4':
@@ -169,36 +171,39 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'waiting_back'
         
         elif mensaje_usuario == '5':
-            # 🖼️ NUEVA IMAGEN PARA 'HACER PEDIDO'
-            # 🛑 Reemplaza el link de abajo por el nuevo link directo de Imgur de tu otra foto
             URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
-            
-            # 1. Mandamos la imagen
             enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
-            
-            # 2. Mandamos el texto con las instrucciones claras
-            responder(usuario_id, """
-🙌 Para pedir, escribe en un solo mensaje:
-
-✅ Sabores y Cantidad
-✅ Presentación (Individual o Familiar)
-✅ Dirección de entrega completa (con CP y referencias)
-""", plataforma)
-            
+            responder(usuario_id, "🙌 Para pedir, escribe en un solo mensaje:\n\n✅ Sabores y Cantidad\n✅ Presentación (Individual o Familiar)\n✅ Dirección de entrega completa (con CP y referencias)\n", plataforma)
             user_sessions[session_key] = 'tomando_pedido'
 
         elif mensaje_usuario == '6':
-            responder(usuario_id, "Mayoreo 🏪\nEscribe:\n- Ciudad\n- Tipo de negocio\n- Volumen estimado", plataforma)
+            # 🌟 TEXTO ACTUALIZADO DE MAYOREO
+            responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 👩🏻‍💻✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
             user_sessions[session_key] = 'mayoreo'
 
         elif mensaje_usuario == '7':
-            responder(usuario_id, "Claro 😊 Ya le avisé a un humano. Te atenderán en breve", plataforma)
+            # 🌟 TEXTO ACTUALIZADO DE HUMANO
+            responder(usuario_id, "¡Gracias por tu mensaje! 🙌\nEn un momento alguien del equipo te atiende personalmente 💚", plataforma)
             notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
             user_sessions[session_key] = 'pausado'
 
         # 🚫 SI ESCRIBE ALGO QUE NO ES UN NÚMERO
         else:
             responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
+
+    # 🌟 NUEVA LÓGICA: SI ESTÁ VIENDO LOS SABORES
+    elif estado_actual == 'viendo_sabores':
+        if mensaje_usuario == '1':
+            # Funciona exactamente igual que si hubiera presionado 5 en el menú principal
+            URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
+            enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
+            responder(usuario_id, "🙌 Para pedir, escribe en un solo mensaje:\n\n✅ Sabores y Cantidad\n✅ Presentación (Individual o Familiar)\n✅ Dirección de entrega completa (con CP y referencias)\n", plataforma)
+            user_sessions[session_key] = 'tomando_pedido'
+        else:
+            # Si escribe otra cosa, asumimos que está pasando sus datos y lo pausamos
+            responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
+            notificar_duena("DATOS/PEDIDO", usuario_id, mensaje_usuario, plataforma)
+            user_sessions[session_key] = 'pausado'
 
     elif estado_actual == 'presentaciones':
         if mensaje_usuario == '1':
@@ -209,8 +214,8 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "Opción no válida. 1, 2 o manda 0 para volver.", plataforma)
 
     elif estado_actual in ['envios', 'tomando_pedido', 'mayoreo', 'waiting_back']:
-        # AUTO-PAUSA AL RECIBIR DATOS DEL CLIENTE
-        responder(usuario_id, "Perfecto, danos unos minutos, estamos revisando tus datos", plataforma)
+        # 🌟 TEXTO ACTUALIZADO DE AUTO-PAUSA AL RECIBIR DATOS DEL CLIENTE
+        responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
         # Aquí el bot se pone en silencio automáticamente
