@@ -29,7 +29,7 @@ URL_IG = f"https://graph.instagram.com/v17.0/{IG_ID}/messages"
 
 # Memoria
 user_sessions = {}
-mensajes_procesados = set() # 🌟 MEMORIA ANTI-DUPLICADOS (La libreta de folios)
+mensajes_procesados = set() 
 
 # Menú
 MENSAJE_BIENVENIDA = """
@@ -125,37 +125,34 @@ def notificar_duena(origen, cliente_id, mensaje, plataforma):
 # Cerebro del bot :)
 
 def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
-    # Convertimos a minúsculas para que "HOLA" o "hola" funcionen igual
     mensaje_usuario = str(mensaje_usuario).strip().lower()
     session_key = f"{plataforma}_{usuario_id}"
     
     estado_actual = user_sessions.get(session_key, 'nuevo')
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
-    # 🌟 DICCIONARIO RECARGADO DE DESPERTAR
+    # comnados cliente para despertar
     palabras_clave = [
         'hola', 'buenas', 'buenos', 'info', 'empezar',
         'quiero', 'precio', 'precios', 'comprar', 'pedido', 'información', 'informacion',
         'ayuda', 'duda', 'papas', 'botana', 'catalogo', 'catálogo', 'costo', 'sabores'
     ]
     
-    # 🌟 EL RADAR (Busca si alguna palabra clave está en lo que dijo el cliente)
+    # Radar
     contiene_saludo = any(palabra in mensaje_usuario for palabra in palabras_clave)
 
-    # 1. MODO PAUSADO (HUMAN HANDOFF - Tiene prioridad absoluta)
+    # Human handoff
     if estado_actual == 'pausado':
         if mensaje_usuario == '0' or mensaje_usuario == 'menu' or mensaje_usuario == 'menú':
             user_sessions[session_key] = 'menu'
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return 
         
-    # 2. INTERCEPCIÓN DE SALUDOS Y BOTÓN DE REGRESO GLOBAL (0)
     if estado_actual == 'nuevo' or contiene_saludo or mensaje_usuario == '0':
         user_sessions[session_key] = 'menu'
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return
 
-    # 3. NAVEGACIÓN DEL MENÚ (Solo llega aquí si no es 0 ni un saludo)
     if estado_actual == 'menu':
         if mensaje_usuario == '1':
             URL_FOTO_SABORES = "https://i.imgur.com/emCdIVl.jpeg"
@@ -243,29 +240,25 @@ def recibir_eventos():
                         es_eco = event["message"].get("is_echo", False)
                         sender_id = str(event.get("sender", {}).get("id", ""))
                         
-                        # 🌟 1. LOS BOTONES SECRETOS DE TU AMIGA (FRASES INVISIBLES)
+                        # Comandos para paua y reanudar
                         if es_eco or sender_id == str(IG_ID):
                             texto_duena = event["message"].get("text", "")
                             if texto_duena:
                                 texto_duena_lower = texto_duena.lower()
                                 cliente_id = str(event.get("recipient", {}).get("id", ""))
                                 
-                                # 🤫 Botón de PAUSA
+                                # Botón de PAUSA
                                 if "te atiendo personalmente" in texto_duena_lower and cliente_id:
                                     session_key = f"instagram_{cliente_id}"
                                     user_sessions[session_key] = 'pausado'
                                     print(f"🤫 BOT APAGADO MANUALMENTE PARA EL CLIENTE {cliente_id}")
                                 
-                                # 🤖 Botón de REINICIO (Despertar)
+                                # Botón de REINICIO (Despertar)
                                 elif "quedo a tus órdenes" in texto_duena_lower and cliente_id:
                                     session_key = f"instagram_{cliente_id}"
-                                    # Borramos la memoria de este cliente para que vuelva a ser 'nuevo'
                                     user_sessions.pop(session_key, None) 
                                     print(f"🤖 BOT ENCENDIDO MANUALMENTE PARA EL CLIENTE {cliente_id}")
-                            
-                            continue # Ignoramos el resto para no hacer ecos ni bucles
-                            
-                        # 2. PROCESAR MENSAJES DEL CLIENTE
+                            continue 
                         if "text" in event["message"]:
                             msg_id = event["message"].get("mid")
                             if msg_id in mensajes_procesados:
