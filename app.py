@@ -134,7 +134,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 
     # 🌟 DICCIONARIO RECARGADO DE DESPERTAR
     palabras_clave = [
-        'hola', 'buenas', 'buenos', 'menu', 'menú', 'info', 'empezar',
+        'hola', 'buenas', 'buenos', 'info', 'empezar',
         'quiero', 'precio', 'precios', 'comprar', 'pedido', 'información', 'informacion',
         'ayuda', 'duda', 'papas', 'botana', 'catalogo', 'catálogo', 'costo', 'sabores'
     ]
@@ -144,11 +144,10 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
 
     # 1. MODO PAUSADO (HUMAN HANDOFF - Tiene prioridad absoluta)
     if estado_actual == 'pausado':
-        # Si está pausado, solo despierta con una palabra clave o con el 0
-        if mensaje_usuario == '0' or contiene_saludo:
+        if mensaje_usuario == '0' or mensaje_usuario == 'menu' or mensaje_usuario == 'menú':
             user_sessions[session_key] = 'menu'
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
-        return # Si dice otra cosa ("gracias", "ok"), sigue mudo
+        return 
         
     # 2. INTERCEPCIÓN DE SALUDOS Y BOTÓN DE REGRESO GLOBAL (0)
     if estado_actual == 'nuevo' or contiene_saludo or mensaje_usuario == '0':
@@ -239,23 +238,43 @@ def recibir_eventos():
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
-                    if "message" in event and event["message"].get("is_echo"):
-                        continue
+                    
+                    if "message" in event:
+                        es_eco = event["message"].get("is_echo", False)
+                        sender_id = str(event.get("sender", {}).get("id", ""))
                         
-                    if "message" in event and "text" in event["message"]:
-                        msg_id = event["message"].get("mid")
-                        if msg_id in mensajes_procesados:
-                            continue 
-                        if msg_id:
-                            mensajes_procesados.add(msg_id)
+                        # 🌟 1. LOS BOTONES SECRETOS DE TU AMIGA (FRASES INVISIBLES)
+                        if es_eco or sender_id == str(IG_ID):
+                            texto_duena = event["message"].get("text", "")
+                            if texto_duena:
+                                texto_duena_lower = texto_duena.lower()
+                                cliente_id = str(event.get("recipient", {}).get("id", ""))
+                                
+                                # 🤫 Botón de PAUSA
+                                if "te atiendo personalmente" in texto_duena_lower and cliente_id:
+                                    session_key = f"instagram_{cliente_id}"
+                                    user_sessions[session_key] = 'pausado'
+                                    print(f"🤫 BOT APAGADO MANUALMENTE PARA EL CLIENTE {cliente_id}")
+                                
+                                # 🤖 Botón de REINICIO (Despertar)
+                                elif "quedo a tus órdenes" in texto_duena_lower and cliente_id:
+                                    session_key = f"instagram_{cliente_id}"
+                                    # Borramos la memoria de este cliente para que vuelva a ser 'nuevo'
+                                    user_sessions.pop(session_key, None) 
+                                    print(f"🤖 BOT ENCENDIDO MANUALMENTE PARA EL CLIENTE {cliente_id}")
                             
-                        sender_id = str(event["sender"]["id"])
-                        
-                        if sender_id == str(IG_ID):
-                            continue
+                            continue # Ignoramos el resto para no hacer ecos ni bucles
                             
-                        texto = event["message"]["text"]
-                        cerebro_sanati(sender_id, texto, "instagram")
+                        # 2. PROCESAR MENSAJES DEL CLIENTE
+                        if "text" in event["message"]:
+                            msg_id = event["message"].get("mid")
+                            if msg_id in mensajes_procesados:
+                                continue 
+                            if msg_id:
+                                mensajes_procesados.add(msg_id)
+                                
+                            texto = event["message"]["text"]
+                            cerebro_sanati(sender_id, texto, "instagram")
             return jsonify({"status": "ok"}), 200
 
         elif body.get("object") == "whatsapp_business_account":
