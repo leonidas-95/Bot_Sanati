@@ -147,6 +147,12 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             user_sessions[session_key] = 'menu'
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return 
+   
+    palabras_cortesia = ['gracias', 'ok', 'vale', 'perfecto', 'listo', 'bye', 'adiós', 'adios', 'va', 'vaa', 'muchas gracias', 'vaaa']
+    if estado_actual == 'nuevo' and not contiene_saludo:
+        if any(palabra in mensaje_usuario for palabra in palabras_cortesia) and len(mensaje_usuario) < 45:
+            print("🛑 Bot silencioso: El cliente solo dijo gracias/ok.")
+            return 
         
     if estado_actual == 'nuevo' or contiene_saludo or mensaje_usuario == '0':
         user_sessions[session_key] = 'menu'
