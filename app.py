@@ -238,6 +238,8 @@ def verificar_token():
 def recibir_eventos():
     try:
         body = request.json
+        print(f"📦 LLEGÓ ALGO A RENDER: {body}")
+        body = request.json
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
