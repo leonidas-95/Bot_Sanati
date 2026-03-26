@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import requests
+import redis # <-- NUEVO: Importamos Redis
 
 # caja fuerte
 load_dotenv()
@@ -9,7 +10,6 @@ load_dotenv()
 app = Flask(__name__)
 
 # SECCIÓN DE LLAVES
-
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
 
 # Whats
@@ -27,9 +27,11 @@ NUMERO_DUENA = os.environ.get("NUMERO_DUENA")
 URL_WA = f"https://graph.facebook.com/v17.0/{WA_PHONE_ID}/messages"
 URL_IG = f"https://graph.instagram.com/v17.0/{IG_ID}/messages"
 
-# Memoria
-user_sessions = {}
-mensajes_procesados = set() 
+# <-- NUEVO: CONEXIÓN A LA BASE DE DATOS DE UPSTASH -->
+# Conectamos a Redis. Si por algo falla en tu compu, intentará conectar local, 
+# pero en Render usará tu URL larguísima de Upstash.
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 # Menú
 MENSAJE_BIENVENIDA = """
@@ -46,8 +48,7 @@ Escribe el número de la opción que buscas:
 7️⃣ Hablar con una persona
 """
 
-# ENviar imagenes
-
+# Enviar imagenes
 def enviar_imagen(usuario_id, url_imagen, plataforma):
     if plataforma == "whatsapp":
         headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
@@ -81,7 +82,6 @@ def enviar_imagen(usuario_id, url_imagen, plataforma):
         print(f"❌ Error de red enviando IMAGEN: {e}")
 
 # Logs (chismoso)
-
 def enviar_whatsapp(telefono, texto):
     headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
     data = {"messaging_product": "whatsapp", "to": telefono, "type": "text", "text": {"body": texto}}
@@ -121,14 +121,14 @@ def notificar_duena(origen, cliente_id, mensaje, plataforma):
     )
     enviar_whatsapp(NUMERO_DUENA, texto_duena)
 
-
 # Cerebro del bot :)
-
 def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     mensaje_usuario = str(mensaje_usuario).strip().lower()
     session_key = f"{plataforma}_{usuario_id}"
     
-    estado_actual = user_sessions.get(session_key, 'nuevo')
+    # <-- NUEVO: Leemos el estado desde Redis (si no existe, es 'nuevo')
+    estado_actual = redis_client.get(session_key) or 'nuevo'
+    
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
     # comnados cliente para despertar
@@ -144,7 +144,8 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     # Human handoff
     if estado_actual == 'pausado':
         if mensaje_usuario == '0' or mensaje_usuario == 'menu' or mensaje_usuario == 'menú':
-            user_sessions[session_key] = 'menu'
+            # <-- NUEVO: Guardamos estado en Redis por 24 horas (86400 segundos)
+            redis_client.set(session_key, 'menu', ex=86400)
             responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return 
    
@@ -155,7 +156,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             return 
         
     if estado_actual == 'nuevo' or contiene_saludo or mensaje_usuario == '0':
-        user_sessions[session_key] = 'menu'
+        redis_client.set(session_key, 'menu', ex=86400)
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
         return
 
@@ -164,34 +165,35 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             URL_FOTO_SABORES = "https://i.imgur.com/emCdIVl.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_SABORES, plataforma)
             responder(usuario_id, "Aquí tienes nuestros sabores 🌶️🥒:\n\n🔸 Jícama: Limón, Adobada, Salsas negras, Jalapeño, Flamin hot\n🔸 Pepino: Limón, Flamin hot\n🔸 Coliflor: Adobada\n\n(0 para menú principal, 1 para hacer pedido)", plataforma)
-            user_sessions[session_key] = 'viendo_sabores'
+            redis_client.set(session_key, 'viendo_sabores', ex=86400)
         
         elif mensaje_usuario == '2':
             responder(usuario_id, "Presentaciones:\n1️⃣ Individual (70g)\n2️⃣ Familiar (500g)\n\nElige una o manda 0 para volver.", plataforma)
-            user_sessions[session_key] = 'presentaciones'
+            redis_client.set(session_key, 'presentaciones', ex=86400)
 
         elif mensaje_usuario == '3':
             responder(usuario_id, "¡Claro! 😊\n\nHacemos envíos a toda la República 🚛 a partir de 15 piezas.\nCompártenos tu código postal y el estado, y con gusto te cotizamos el envío ✨📦", plataforma)
-            user_sessions[session_key] = 'envios'
+            redis_client.set(session_key, 'envios', ex=86400)
 
         elif mensaje_usuario == '4':
             responder(usuario_id, "Puedes checar nuestros puntos de venta en el perfil 🤍\nO compártenos tu ciudad y C.P. y te cotizamos venta directa ✨", plataforma)
-            user_sessions[session_key] = 'waiting_back'
+            redis_client.set(session_key, 'waiting_back', ex=86400)
         
         elif mensaje_usuario == '5':
             URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
             responder(usuario_id, "🙌 Para pedir, escribe en un solo mensaje:\n\n✅ Sabores y Cantidad\n✅ Presentación (Individual o Familiar)\n✅ Dirección de entrega completa (con CP y referencias)\n", plataforma)
-            user_sessions[session_key] = 'tomando_pedido'
+            redis_client.set(session_key, 'tomando_pedido', ex=86400)
 
         elif mensaje_usuario == '6':
             responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 🏪✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
-            user_sessions[session_key] = 'mayoreo'
+            redis_client.set(session_key, 'mayoreo', ex=86400)
 
         elif mensaje_usuario == '7':
             responder(usuario_id, "¡Gracias por tu mensaje! 🙌\nEn un momento alguien del equipo te atiende personalmente 💚", plataforma)
             notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
-            user_sessions[session_key] = 'pausado'
+            # <-- NUEVO: Pausa con caducidad de 12 horas (43200 segundos)
+            redis_client.set(session_key, 'pausado', ex=43200)
 
         else:
             responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
@@ -201,11 +203,11 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             URL_FOTO_HACER_PEDIDO = "https://i.imgur.com/3Ow64vk.jpeg"
             enviar_imagen(usuario_id, URL_FOTO_HACER_PEDIDO, plataforma)
             responder(usuario_id, "🙌 Para pedir, escribe en un solo mensaje:\n\n✅ Sabores y Cantidad\n✅ Presentación (Individual o Familiar)\n✅ Dirección de entrega completa (con CP y referencias)\n", plataforma)
-            user_sessions[session_key] = 'tomando_pedido'
+            redis_client.set(session_key, 'tomando_pedido', ex=86400)
         else:
             responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
             notificar_duena("DATOS/PEDIDO", usuario_id, mensaje_usuario, plataforma)
-            user_sessions[session_key] = 'pausado'
+            redis_client.set(session_key, 'pausado', ex=43200)
 
     elif estado_actual == 'presentaciones':
         if mensaje_usuario == '1':
@@ -219,14 +221,13 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
         responder(usuario_id, "Perfecto, danos unos minutos 🙌\nEn breve te enviamos la información completa 🤩", plataforma)
         tipo_dato = estado_actual.upper().replace("_", " ")
         notificar_duena(tipo_dato, usuario_id, mensaje_usuario, plataforma)
-        user_sessions[session_key] = 'pausado'
+        redis_client.set(session_key, 'pausado', ex=43200)
 
     else:
-        user_sessions[session_key] = 'menu'
+        redis_client.set(session_key, 'menu', ex=86400)
         responder(usuario_id, MENSAJE_BIENVENIDA, plataforma)
 
 # Rutas Flask
-
 @app.route("/webhook", methods=["GET"])
 def verificar_token():
     token = request.args.get("hub.verify_token")
@@ -239,40 +240,41 @@ def recibir_eventos():
     try:
         body = request.json
         print(f"📦 LLEGÓ ALGO A RENDER: {body}")
-        body = request.json
+        
         if body.get("object") == "instagram":
             for entry in body["entry"]:
                 for event in entry.get("messaging", []):
-                    
                     if "message" in event:
                         es_eco = event["message"].get("is_echo", False)
                         sender_id = str(event.get("sender", {}).get("id", ""))
                         
-                        # Comandos para paua y reanudar
+                        # Comandos para pausa y reanudar manual (Instagram)
                         if es_eco or sender_id == str(IG_ID):
                             texto_duena = event["message"].get("text", "")
                             if texto_duena:
                                 texto_duena_lower = texto_duena.lower()
                                 cliente_id = str(event.get("recipient", {}).get("id", ""))
                                 
-                                # Botón de PAUSA
+                                # Botón de pausa
                                 if "te atiendo personalmente" in texto_duena_lower and cliente_id:
                                     session_key = f"instagram_{cliente_id}"
-                                    user_sessions[session_key] = 'pausado'
+                                    redis_client.set(session_key, 'pausado', ex=43200)
                                     print(f"🤫 BOT APAGADO MANUALMENTE PARA EL CLIENTE {cliente_id}")
                                 
-                                # Botón de REINICIO (Despertar)
+                                # Botón de despertar
                                 elif "quedo a tus órdenes" in texto_duena_lower and cliente_id:
                                     session_key = f"instagram_{cliente_id}"
-                                    user_sessions.pop(session_key, None) 
+                                    redis_client.delete(session_key) 
                                     print(f"🤖 BOT ENCENDIDO MANUALMENTE PARA EL CLIENTE {cliente_id}")
                             continue 
+                            
                         if "text" in event["message"]:
                             msg_id = event["message"].get("mid")
-                            if msg_id in mensajes_procesados:
-                                continue 
+                            # <-- NUEVO: Control de duplicados con Redis (expira en 1 hora)
                             if msg_id:
-                                mensajes_procesados.add(msg_id)
+                                if redis_client.get(f"msg_{msg_id}"):
+                                    continue
+                                redis_client.set(f"msg_{msg_id}", "1", ex=3600)
                                 
                             texto = event["message"]["text"]
                             cerebro_sanati(sender_id, texto, "instagram")
@@ -286,10 +288,11 @@ def recibir_eventos():
                         mensaje = value["messages"][0]
                         
                         msg_id = mensaje.get("id")
-                        if msg_id in mensajes_procesados:
-                            continue 
+                        # <-- NUEVO: Control de duplicados con Redis (expira en 1 hora)
                         if msg_id:
-                            mensajes_procesados.add(msg_id)
+                            if redis_client.get(f"msg_{msg_id}"):
+                                continue
+                            redis_client.set(f"msg_{msg_id}", "1", ex=3600)
                             
                         telefono = mensaje["from"]
                         if telefono.startswith("521") and len(telefono) == 13:
