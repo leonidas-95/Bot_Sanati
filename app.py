@@ -173,7 +173,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             cliente_pausado = partes[1]
             key_borrar = f"whatsapp_{cliente_pausado}"
             redis_client.delete(key_borrar)
-            responder(NUMERO_DUENA, f"✅ Listo jefa, bot reactivado para el cliente {cliente_pausado}", "whatsapp")
+            responder(NUMERO_DUENA, f"✅ Bot reactivado para el cliente {cliente_pausado}", "whatsapp")
         else:
             responder(NUMERO_DUENA, "❌ Formato incorrecto. Usa: /reanudar 52xxxxxxxxxx", "whatsapp")
         return # Terminamos aquí para que no siga evaluando
