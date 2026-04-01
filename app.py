@@ -127,22 +127,58 @@ def responder(usuario_id, texto, plataforma):
     elif plataforma == "messenger": # NUEVO
         enviar_messenger(usuario_id, texto)
 
+# 🚨 ACTUALIZADO: Envío por Plantilla de Utilidad para saltar las 24 hrs
 def notificar_duena(origen, cliente_id, mensaje, plataforma):
-    icono = "🟢" if plataforma == "whatsapp" else "📸" if plataforma == "instagram" else "🔵"
-    texto_duena = (
-        f"🚨 *AVISO SANATI ({origen})* 🚨\n\n"
-        f"{icono} *Canal:* {plataforma.upper()}\n"
-        f"👤 *Cliente ID:* {cliente_id}\n"
-        f"📝 *Dijo:* {mensaje}\n\n"
-        f"👉 ¡Atiende al cliente en su app!"
-    )
-    enviar_whatsapp(NUMERO_DUENA, texto_duena)
+    # Truncamos el mensaje por si el cliente mandó una biblia (las plantillas tienen límite)
+    mensaje_corto = str(mensaje)[:60] + "..." if len(str(mensaje)) > 60 else str(mensaje)
+    
+    headers = {"Authorization": f"Bearer {WA_TOKEN}", "Content-Type": "application/json"}
+    data = {
+        "messaging_product": "whatsapp",
+        "to": NUMERO_DUENA,
+        "type": "template",
+        "template": {
+            "name": "alerta_sanati", # 👈 IMPORTANTE: Este nombre debe coincidir con Meta
+            "language": { "code": "es_MX" },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": str(origen) },
+                        { "type": "text", "text": str(plataforma).upper() },
+                        { "type": "text", "text": str(cliente_id) },
+                        { "type": "text", "text": mensaje_corto }
+                    ]
+                }
+            ]
+        }
+    }
+    try:
+        r = requests.post(URL_WA, json=data, headers=headers)
+        if r.status_code != 200:
+            print(f"❌ Error enviando PLANTILLA a la dueña: {r.text}")
+        else:
+            print(f"🚨 Alerta segura enviada a la dueña")
+    except Exception as e:
+        print(f"❌ Error de red en alerta: {e}")
 
 # Cerebro del bot :)
 def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     mensaje_usuario = str(mensaje_usuario).strip().lower()
-    session_key = f"{plataforma}_{usuario_id}"
     
+    # 🚨 NUEVO: Puerta trasera para la dueña (Solo su número lo puede activar)
+    if str(usuario_id) == str(NUMERO_DUENA) and mensaje_usuario.startswith("/reanudar"):
+        partes = mensaje_usuario.split(" ")
+        if len(partes) == 2:
+            cliente_pausado = partes[1]
+            key_borrar = f"whatsapp_{cliente_pausado}"
+            redis_client.delete(key_borrar)
+            responder(NUMERO_DUENA, f"✅ Listo jefa, bot reactivado para el cliente {cliente_pausado}", "whatsapp")
+        else:
+            responder(NUMERO_DUENA, "❌ Formato incorrecto. Usa: /reanudar 52xxxxxxxxxx", "whatsapp")
+        return # Terminamos aquí para que no siga evaluando
+
+    session_key = f"{plataforma}_{usuario_id}"
     estado_actual = redis_client.get(session_key) or 'nuevo'
     
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
