@@ -8,15 +8,13 @@ import redis
 load_dotenv()
 
 app = Flask(__name__)
-
-# SECCIÓN DE LLAVES
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
 
-# Whats
+#Whats
 WA_TOKEN = os.environ.get("WA_TOKEN")
 WA_PHONE_ID = os.environ.get("WA_PHONE_ID")
 
-# Instagram
+#Instagram
 IG_TOKEN = os.environ.get("IG_TOKEN")
 IG_ID = os.environ.get("IG_ID")
 
@@ -32,7 +30,7 @@ URL_WA = f"https://graph.facebook.com/v17.0/{WA_PHONE_ID}/messages"
 URL_IG = f"https://graph.instagram.com/v17.0/{IG_ID}/messages"
 URL_FB = f"https://graph.facebook.com/v17.0/{FB_PAGE_ID}/messages" # NUEVO
 
-# Conexión a Redis
+#Conexión a Redis
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
@@ -79,11 +77,11 @@ def enviar_imagen(usuario_id, url_imagen, plataforma):
     try:
         r = requests.post(url_destino, json=data, headers=headers)
         if r.status_code != 200:
-            print(f"Error enviando IMAGEN en {plataforma}: {r.text}")
+            print(f"Error enviando imagen en {plataforma}: {r.text}")
         else:
             print(f"Imagen enviada a {usuario_id} por {plataforma}")
     except Exception as e:
-        print(f"Error de red enviando IMAGEN: {e}")
+        print(f"Error de red enviando imagen: {e}")
 
 # Logs (chismoso)
 def enviar_whatsapp(telefono, texto):
@@ -154,7 +152,7 @@ def notificar_duena(origen, cliente_id, mensaje, plataforma):
     try:
         r = requests.post(URL_WA, json=data, headers=headers)
         if r.status_code != 200:
-            print(f"Error enviando PLANTILLA a la dueña: {r.text}")
+            print(f"Error enviando plantilla a la dueña: {r.text}")
         else:
             print(f"Alerta segura enviada a la dueña")
     except Exception as e:
