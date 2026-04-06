@@ -179,9 +179,8 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
     print(f"⚙️ {plataforma.upper()} | User: {usuario_id} | Estado: {estado_actual} | Dice: {mensaje_usuario}")
 
     palabras_clave = [
-        'hola', 'buenas', 'buenos', 'info', 'empezar',
-        'quiero', 'precio', 'precios', 'comprar', 'pedido', 'información', 'informacion',
-        'ayuda', 'duda', 'papas', 'botana', 'catalogo', 'catálogo', 'costo', 'sabores'
+        'hola', 'buenas', 'buenos', 'info', 'empezar', 'precio', 'precios', 'comprar', 'información', 'informacion',
+        'ayuda', 'duda', 'catalogo', 'catálogo', 'costo', 'sabores'
     ]
     
     contiene_saludo = any(palabra in mensaje_usuario for palabra in palabras_clave)
