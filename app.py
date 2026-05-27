@@ -46,7 +46,10 @@ Escribe el número de la opción que buscas:
 4️⃣ Cómo comprar
 5️⃣ Hacer pedido por este medio
 6️⃣ Mayoreo / Negocios
-7️⃣ Hablar con una persona
+
+Más información en nuestro WhatsApp o correo del perfil 💛✨
+
+Y de pasada... danos follow 👀
 """
 
 # Enviar imagenes
@@ -232,13 +235,8 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 🏪✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
             redis_client.set(session_key, 'mayoreo', ex=86400)
 
-        elif mensaje_usuario == '7':
-            responder(usuario_id, "¡Gracias por tu mensaje! 🙌\nEn un momento alguien del equipo te atiende personalmente 💚", plataforma)
-            notificar_duena("SOLICITUD HUMANO", usuario_id, "Quiere hablar con una persona", plataforma)
-            redis_client.set(session_key, 'pausado', ex=7200)
-
         else:
-            responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 7 para navegar, o manda 0 para ver el menú principal.", plataforma)
+            responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 6 para navegar, o manda 0 para ver el menú principal.", plataforma)
 
     elif estado_actual == 'viendo_sabores':
         if mensaje_usuario == '1':
@@ -297,7 +295,7 @@ def recibir_eventos():
                                 texto_duena_lower = texto_duena.lower()
                                 cliente_id = str(event.get("recipient", {}).get("id", ""))
                                 
-                                if "te atiendo personalmente" in texto_duena_lower and cliente_id:
+                                if "hola buen día" in texto_duena_lower or "hola buen dia" in texto_duena_lower:
                                     redis_client.set(f"instagram_{cliente_id}", 'pausado', ex=7200)
                                     print(f"BOT IG APAGADO PARA {cliente_id}")
                                 
@@ -330,7 +328,7 @@ def recibir_eventos():
                                 texto_duena_lower = texto_duena.lower()
                                 cliente_id = str(event.get("recipient", {}).get("id", ""))
                                 
-                                if "te atiendo personalmente" in texto_duena_lower and cliente_id:
+                                if "hola buen día" in texto_duena_lower or "hola buen dia" in texto_duena_lower:
                                     redis_client.set(f"messenger_{cliente_id}", 'pausado', ex=7200)
                                     print(f"BOT FB APAGADO PARA {cliente_id}")
                                 
