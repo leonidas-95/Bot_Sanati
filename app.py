@@ -238,7 +238,7 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             redis_client.set(session_key, 'mayoreo', ex=86400)
 
         elif mensaje_usuario == '7':
-            responder(usuario_id, "¡Claro! 🛒 Puedes comprar nuestras papas directamente en Mercado Libre aquí:\n\n👉 https://listado.mercadolibre.com.mx/_CustId_3517459460?item_id=MLM5650697946&category_id=MLM194352&seller_id=3517459460&client=recoview-selleritems&recos_listing=true\n\n(Manda 0 para volver al menú)", plataforma)
+            responder(usuario_id, "¡Claro! 🛒 Puedes comprar nuestras chips directamente en Mercado Libre aquí:\n\n👉 https://listado.mercadolibre.com.mx/_CustId_3517459460?item_id=MLM5650697946&category_id=MLM194352&seller_id=3517459460&client=recoview-selleritems&recos_listing=true\n\n(Manda 0 para volver al menú)", plataforma)
             
         elif mensaje_usuario == '8':
             responder(usuario_id, "¡Claro! 🛍️ También estamos en Liverpool. Encuentra nuestros productos aquí:\n\n👉 https://www.liverpool.com.mx/tienda?s=sanati\n\n(Manda 0 para volver al menú)", plataforma)
