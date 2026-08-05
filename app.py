@@ -46,6 +46,8 @@ Escribe el número de la opción que buscas:
 4️⃣ Cómo comprar
 5️⃣ Hacer pedido por este medio
 6️⃣ Mayoreo / Negocios
+7️⃣ Comprar en Mercado Libre
+8️⃣ Comprar en Liverpool
 
 Más información en nuestro WhatsApp o correo del perfil 💛✨
 
@@ -235,8 +237,14 @@ def cerebro_sanati(usuario_id, mensaje_usuario, plataforma):
             responder(usuario_id, "¡Qué gusto que te interese el mayoreo! 🏪✨\nPara poder enviarte la información adecuada, compártenos por favor:\n\n• Ciudad\n• Tipo de negocio\n• Volumen estimado\n• número de WhatsApp\n\nCon eso te damos todos los detalles por WhatsApp 💚", plataforma)
             redis_client.set(session_key, 'mayoreo', ex=86400)
 
+        elif mensaje_usuario == '7':
+            responder(usuario_id, "¡Claro! 🛒 Puedes comprar nuestras papas directamente en Mercado Libre aquí:\n\n👉 https://listado.mercadolibre.com.mx/_CustId_3517459460?item_id=MLM5650697946&category_id=MLM194352&seller_id=3517459460&client=recoview-selleritems&recos_listing=true\n\n(Manda 0 para volver al menú)", plataforma)
+            
+        elif mensaje_usuario == '8':
+            responder(usuario_id, "¡Claro! 🛍️ También estamos en Liverpool. Encuentra nuestros productos aquí:\n\n👉 https://www.liverpool.com.mx/tienda?s=sanati\n\n(Manda 0 para volver al menú)", plataforma)
+
         else:
-            responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 6 para navegar, o manda 0 para ver el menú principal.", plataforma)
+            responder(usuario_id, "Perdón, no entendí esa opción 😅.\nPor favor escribe un número del 1 al 8 para navegar, o manda 0 para ver el menú principal.", plataforma)
 
     elif estado_actual == 'viendo_sabores':
         if mensaje_usuario == '1':
